@@ -1,0 +1,82 @@
+{
+  "app": {
+    "name": "医疗数据科学结构化工作流系统（Designed by Christ.paul90@gmail.com. All rights reserved.）",
+    "version": "1.0.0",
+    "author": "Medical Imaging Team",
+    "description": "基于Python和PyQt5的医疗影像处理工作流应用"
+  },
+  "database": {
+    "type": "sqlite",
+    "path": "database/medical_imaging.db",
+    "backup_path": "database/backup/",
+    "auto_backup": true,
+    "backup_interval": 24
+  },
+  "ui": {
+    "theme": "dark",
+    "language": "zh_CN",
+    "window_size": {
+      "width": 1920,
+      "height": 1227
+    },
+    "window_position": {
+      "x": -1,
+      "y": -6
+    },
+    "font": {
+      "family": "Microsoft YaHei",
+      "size": 12
+    }
+  },
+  "dicom": {
+    "supported_formats": [
+      ".dcm",
+      ".dicom"
+    ],
+    "max_file_size": 500,
+    "cache_path": "assets/cache/dicom/",
+    "export_formats": [
+      "json",
+      "csv",
+      "xml"
+    ]
+  },
+  "ocr": {
+    "engine": "tesseract",
+    "languages": [
+      "chi_sim",
+      "eng"
+    ],
+    "default_language": "chi_sim",
+    "confidence_threshold": 0.6,
+    "preprocessing": {
+      "denoise": true,
+      "enhance_contrast": true,
+      "binarize": true
+    }
+  },
+  "text_processing": {
+    "supported_formats": [
+      ".txt",
+      ".docx",
+      ".pdf"
+    ],
+    "max_file_size": 50,
+    "encoding": "utf-8",
+    "backup_enabled": true
+  },
+  "logging": {
+    "level": "INFO",
+    "file_path": "logs/app.log",
+    "max_file_size": 10,
+    "backup_count": 5,
+    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  },
+  "security": {
+    "session_timeout": 3600,
+    "password_min_length": 6,
+    "max_login_attempts": 3,
+    "lockout_duration": 300
+  },
+  "theme": "light"
+}

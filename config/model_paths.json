@@ -1,0 +1,7 @@
+{
+  "embedding_model": "models/embedding/all-MiniLM-L6-v2",
+  "deepseek_ocr": "assets/models/deepseek_ocr",
+  "ollama_models": "assets/models_home",
+  "ollama_exe": "assets/ollama/ollama.exe",
+  "sam_model": "assets/models/sam_vit_b_01ec64.pth"
+}
