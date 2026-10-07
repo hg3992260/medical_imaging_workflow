@@ -1,0 +1,64 @@
+# ---- 模型权重 / 大资源（不进入仓库）----
+models/
+assets/models/
+assets/models_home/
+assets/ollama/
+assets/cuda_libs/
+assets/installers/
+assets/cache/
+*.pth
+*.pt
+*.ckpt
+*.safetensors
+*.bin
+*.gguf
+
+# ---- 打包产物 / 构建中间件 ----
+dist/
+dist_license_manager_onefile/
+build/
+__pycache__/
+.pycache_pyinstaller/
+*.spec.bak
+
+# ---- 第三方源码副本（体积巨大，不随仓库分发）----
+cocoindex-main/
+segment-anything-main/
+markitdown-main/
+bioicons-main/
+nature-skills-main/
+cocoindex/
+*.zip
+
+# ---- 运行期数据 / 数据库 / 日志 ----
+database/
+logs/
+storage/
+project_storage/
+workspace/
+temp/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+ollama_startup.log
+boot_trace.log
+startup.log
+
+# ---- 本地/私密配置与许可 ----
+license.dat
+license_manage/licenses.db
+config/custom_api_profiles.json
+**/custom_api_profiles.json
+
+# ---- IDE / OS ----
+.vscode/
+.idea/
+.DS_Store
+._*
+Thumbs.db
+*.swp
+
+# ---- 会话辅助产物 ----
+session-dashboard.html
+HANDOVER.md

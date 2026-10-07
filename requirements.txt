@@ -1,0 +1,72 @@
+# ============================================================================
+# Medical Imaging Workflow — Python dependencies (Release V1.0)
+# ----------------------------------------------------------------------------
+# 说明 / Notes
+#   * 本文件只包含“代码依赖”，不含任何模型权重或二进制资源。
+#   * 模型权重请见 README「模型与外部资源」章节，需单独下载。
+#   * 推荐 Python 3.10 / 3.11（PyQt5 + PyTorch 生态最稳定）。
+#   * 需要 GPU 加速时，请先按 PyTorch 官网命令安装带 CUDA 的 torch/torchvision，
+#     再执行本文件（可加 --no-deps 或先装 torch 再装其余）。
+#     e.g. pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# ============================================================================
+
+# --- GUI ---
+PyQt5==5.15.9
+QDarkStyle==3.2.3
+
+# --- 科学计算 / 数据处理 ---
+numpy>=1.26,<3
+scipy>=1.11
+pandas>=2.0
+matplotlib>=3.8
+scikit-learn>=1.4
+scikit-image>=0.22
+openpyxl>=3.1
+xlrd>=2.0
+Pillow>=10.0
+
+# --- 医学影像 ---
+pydicom>=2.4
+opencv-python>=4.8
+
+# --- 深度学习 / 大模型 ---
+torch>=2.1
+torchvision>=0.16
+transformers>=4.40
+sentence-transformers>=2.7
+accelerate>=0.30
+safetensors>=0.4
+timm>=0.9
+
+# --- 文档 / PDF / OCR ---
+python-docx>=1.1
+docxtpl>=0.16
+python-pptx>=1.0
+PyMuPDF>=1.24
+pypdf>=4.0
+pdf2image>=1.17
+pdfplumber>=0.11
+olefile>=0.47
+pywin32>=306 ; sys_platform == "win32"
+
+# --- 数据服务 / 检索 / 知识库 ---
+duckdb>=1.0
+lancedb>=0.10
+pyarrow>=15.0
+Flask>=2.3
+flask-cors>=4.0
+Werkzeug>=3.0
+markdown>=3.6
+
+# --- 文献检索（可选，用于文献/引用相关功能）---
+requests>=2.31
+urllib3>=2.0
+arxiv>=2.1
+scholarly>=1.7
+paperscraper>=0.3
+easydict>=1.13
+
+# --- 可选：语义分割（SAM）---
+# segment-anything 需从源码安装（不随本仓库分发）：
+#   pip install git+https://github.com/facebookresearch/segment-anything.git
+# segment-anything

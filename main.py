@@ -94,6 +94,8 @@ os.environ['PYTHONFAULTHANDLER'] = '0'
 # 全局禁用 Hugging Face 在线访问
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["HF_HUB_ENABLE_INTERNET"] = "0"
+# PyTorch CUDA: use expandable segments so cached memory is released back to OS
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 # ========================================================
 
@@ -105,8 +107,8 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 os.environ["KMP_INIT_AT_FORK"] = "FALSE" # 修复 ntdll.dll 数组越界
 
 # 1.5 解决 PyTorch 独占显存导致 Ollama 判定可用为 0B 的问题
-# 通过 expandable_segments 和 fraction 限制，强迫 PyTorch 将未使用的显存交还给驱动
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True,garbage_collection_threshold:0.8"
+# 某些 Windows/CUDA 组合不支持 expandable_segments，会产生噪声告警，因此仅保留通用阈值项。
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "garbage_collection_threshold:0.8"
 
 # 2. 禁用 PyTorch 的 mkldnn 加速（常见于 PyInstaller 打包后的 AVX 指令集冲突）
 os.environ["LRU_CACHE_CAPACITY"] = "1"
@@ -259,13 +261,8 @@ try:
     import socket
     
     # 始终尝试启动并配置内置 Ollama，即使是在源码运行环境下
-    try:
-        from src.core.path_config import get_base_dir, get_assets_dir
-        base_dir = str(get_base_dir())
-        assets_dir = str(get_assets_dir())
-    except Exception:
-        base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
-        assets_dir = os.path.join(base_dir, "assets")
+    base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
+    internal_dir = getattr(sys, "_MEIPASS", os.path.join(base_dir, "_internal")) if getattr(sys, 'frozen', False) else base_dir
     
     def _first_free_port(start, end):
         for p in range(start, end + 1):
@@ -280,9 +277,7 @@ try:
 
     # 1. 优先使用编译版内置模型路径，其次使用配置路径
     potential_model_paths = [
-        os.path.join(assets_dir, 'models_home'),
-        os.path.join(base_dir, 'models', 'ollama_home'),
-        os.path.join(os.getcwd(), 'models', 'ollama_home'),
+        os.path.join(internal_dir, 'assets', 'models_home'),
         os.path.join(base_dir, 'assets', 'models_home'),
         os.path.join(os.getcwd(), 'assets', 'models_home'),
     ]
@@ -309,16 +304,52 @@ try:
             logger.error(f"Failed to set OLLAMA_MODELS from config: {e}")
 
     # 1.5 强制启动内置 GPU 版 Ollama，不使用系统实例
-    default_port = str(_first_free_port(11434, 11444))
-    default_host = f"http://localhost:{default_port}"
-    os.environ['OLLAMA_HOST'] = default_host
-    os.environ['RSNA_OLLAMA_FORCE_BUNDLED'] = '1'
-    logger.info(f"Set OLLAMA_HOST to bundled instance: {default_host}")
+    # 默认清理已有 ollama.exe，避免系统版与内置版并存导致端口/环境冲突
+    try:
+        if sys.platform.startswith("win"):
+            # Default OFF: never kill a user-installed Ollama. Set RSNA_OLLAMA_KILL_OTHERS=1
+            # for the fully-bundled distribution where the bundled binary must win the port.
+            kill_others = os.environ.get("RSNA_OLLAMA_KILL_OTHERS", "0").strip().lower() in ("1", "true", "yes", "on")
+            if kill_others:
+                subprocess.run(
+                    "taskkill /F /IM ollama.exe",
+                    shell=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+    except Exception:
+        pass
+
+    # 1.5 内置 Ollama 探测：存在内置二进制才强制走内置实例；
+    # 否则回退到「系统已安装的 Ollama」或「外部 OpenAI 兼容 API 服务」。
+    bundled_exe_candidates = [
+        os.path.join(base_dir, '_internal', 'assets', 'ollama', 'ollama.exe'),
+        os.path.join(internal_dir, 'assets', 'ollama', 'ollama.exe'),
+        os.path.join(base_dir, 'assets', 'ollama', 'ollama.exe'),
+    ]
+    bundled_exe = next((p for p in bundled_exe_candidates if os.path.isfile(p)), None)
+
+    if bundled_exe:
+        # 内置实例：挑一个空闲端口，避免与系统 Ollama / 其它服务冲突
+        default_port = str(_first_free_port(11434, 11444))
+        os.environ.setdefault('OLLAMA_HOST', f"http://localhost:{default_port}")
+        os.environ['RSNA_OLLAMA_FORCE_BUNDLED'] = '1'
+        logger.info(f"Using bundled Ollama on {os.environ['OLLAMA_HOST']}: {bundled_exe}")
+    else:
+        # 无内置 Ollama：使用系统 Ollama（默认 11434）或用户在界面上配置的 API 服务
+        os.environ['RSNA_OLLAMA_FORCE_BUNDLED'] = '0'
+        os.environ.setdefault('OLLAMA_HOST', 'http://localhost:11434')
+        logger.info(
+            "Bundled Ollama not found. Using system Ollama at %s "
+            "(or an external OpenAI-compatible API configured in the GUI).",
+            os.environ.get('OLLAMA_HOST'),
+        )
 
     # 2. 启动 Ollama 服务
     ollama_exe_paths = [
-        os.path.join(assets_dir, 'ollama', 'ollama.exe'),
         os.path.join(base_dir, '_internal', 'assets', 'ollama', 'ollama.exe'),
+        os.path.join(internal_dir, 'assets', 'ollama', 'ollama.exe'),
+        os.path.join(base_dir, 'assets', 'ollama', 'ollama.exe'),
     ]
     ollama_exe = None
     for p in ollama_exe_paths:
@@ -332,7 +363,7 @@ try:
             # 使用 creationflags=subprocess.CREATE_NO_WINDOW (0x08000000) 隐藏窗口
             creation_flags = 0x08000000 if sys.platform == 'win32' else 0
             
-            logger.info(f"Starting bundled Ollama service on {default_host}: {ollama_exe}")
+            logger.info(f"Starting bundled Ollama service on {os.environ.get('OLLAMA_HOST')}: {ollama_exe}")
             
             log_file = open('ollama_startup.log', 'w', encoding='utf-8')
             os.environ['OLLAMA_NO_GPU'] = '0'
@@ -695,19 +726,31 @@ def main():
     ThemeManager.apply_theme(app, saved_theme)
     
     # === License Verification ===
-    # Force verification on startup. If invalid or machine fingerprint changed,
-    # show activation dialog.
+    # 源码/开发模式默认开放运行（不强制激活）；打包发行版 (frozen) 默认强制校验。
+    # 可用环境变量 RSNA_LICENSE_ENFORCE=0/1 显式覆盖。
+    _enforce_env = os.environ.get("RSNA_LICENSE_ENFORCE")
+    if _enforce_env is None:
+        _enforce = bool(getattr(sys, "frozen", False))
+    else:
+        _enforce = str(_enforce_env).strip().lower() in ("1", "true", "yes", "on")
+
+    remaining = 0
+    exp_ts = 0
     try:
         from license_manage.integration import validate_license_strict
-        from license_manage.activation_ui import LicenseActivationDialog
         _boottrace("boot:license_imports_ok")
-        
+
         is_valid, msg, remaining, exp_ts = validate_license_strict()
-        
-        if not is_valid:
+        remaining = int(remaining or 0)
+        exp_ts = int(exp_ts or 0)
+
+        if not _enforce:
+            logger.info("License enforcement disabled (open/dev mode): %s", msg)
+        elif not is_valid:
             logger.warning(f"License invalid: {msg}. Showing activation dialog.")
-            
+
             # Show activation dialog
+            from license_manage.activation_ui import LicenseActivationDialog
             dlg = LicenseActivationDialog()
             if dlg.exec_() == LicenseActivationDialog.Accepted:
                 # Re-validate after activation
@@ -718,12 +761,15 @@ def main():
             else:
                 logger.info("Activation cancelled by user.")
                 sys.exit(0)
-            
+
+    except SystemExit:
+        raise
     except Exception as e:
         logger.error(f"License check failed: {e}")
-        # If critical error in license system, fail safe (don't run)
-        QMessageBox.critical(None, "License Error", f"License system error: {e}")
-        sys.exit(1)
+        # 仅在强制校验时失败退出；开放模式下容忍 License 子系统异常
+        if _enforce:
+            QMessageBox.critical(None, "License Error", f"License system error: {e}")
+            sys.exit(1)
 
     window = MainWindow(remaining_seconds=remaining, license_exp_ts=exp_ts)
     _boottrace("boot:mainwindow_created")

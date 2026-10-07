@@ -5,6 +5,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+DEEPSEEK_OCR1_SOURCE_ROOT = os.environ.get(
+    "RSNA_DEEPSEEK_OCR_SOURCE_DIR",
+    "",
+)
+
 def _looks_like_model_dir(path: str) -> bool:
     if not path or not os.path.isdir(path):
         return False
@@ -45,10 +50,11 @@ def get_model_paths():
     # Default relative paths
     paths = {
         "deepseek_ocr": "assets/models/deepseek_ocr",
+        "deepseek_ocr_source": DEEPSEEK_OCR1_SOURCE_ROOT,
         "embedding_model": "models/embedding/all-MiniLM-L6-v2",
         "ollama_models": "assets/models_home",
         "ollama_exe": "assets/ollama/ollama.exe",
-        "sam_model": "assets/models/sam_vit_b_01ec64.pth"
+        "sam_model": "models/sam/sam_vit_b_01ec64.pth"
     }
     
     # Determine base directory
@@ -98,8 +104,7 @@ def get_model_paths():
                     os.path.normpath(os.path.join(app_dir, "assets", "models", "deepseek_ocr")),
                     os.path.normpath(os.path.join(internal_dir, "assets", "models", "deepseek_ocr")),
                     os.path.normpath(os.path.join(app_dir, "_internal", "assets", "models", "deepseek_ocr")),
-                    os.path.normpath(os.path.join(app_dir, "models", "deepseek_ocr1")),
-                    os.path.normpath(os.path.join(internal_dir, "models", "deepseek_ocr1")),
+                    DEEPSEEK_OCR1_SOURCE_ROOT,
                 ]
             )
             chosen = ""
@@ -107,6 +112,28 @@ def get_model_paths():
                 discovered = _find_model_dir(cand)
                 if discovered:
                     chosen = discovered
+                    break
+            resolved_paths[key] = chosen if chosen else os.path.normpath(path)
+            continue
+        if key == "deepseek_ocr_source":
+            override_env = "RSNA_DEEPSEEK_OCR_SOURCE_DIR"
+            override_dir = os.environ.get(override_env)
+            if override_dir:
+                override_dir = os.path.normpath(str(override_dir))
+                if os.path.isdir(override_dir):
+                    resolved_paths[key] = override_dir
+                    continue
+            candidates = []
+            if os.path.isabs(path):
+                candidates.append(os.path.normpath(path))
+            else:
+                candidates.append(os.path.normpath(os.path.join(app_dir, path)))
+                candidates.append(os.path.normpath(os.path.join(internal_dir, path)))
+            candidates.append(DEEPSEEK_OCR1_SOURCE_ROOT)
+            chosen = ""
+            for cand in candidates:
+                if cand and os.path.isdir(cand):
+                    chosen = cand
                     break
             resolved_paths[key] = chosen if chosen else os.path.normpath(path)
             continue

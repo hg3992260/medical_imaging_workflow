@@ -1,9 +1,9 @@
 {
   "app": {
-    "name": "医疗数据科学结构化工作流系统（Designed by Christ.paul90@gmail.com. All rights reserved.）",
+    "name": "医疗数据科学结构化工作流系统 Medical Imaging Workflow",
     "version": "1.0.0",
-    "author": "Medical Imaging Team",
-    "description": "基于Python和PyQt5的医疗影像处理工作流应用"
+    "author": "Medical Imaging Team (hg3992260)",
+    "description": "面向医学科研的 DICOM 影像处理 / 数据清洗 / 大模型总结 / 科学文本生成一体化工作流"
   },
   "database": {
     "type": "sqlite",

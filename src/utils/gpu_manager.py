@@ -20,6 +20,12 @@ class GPUResourceManager:
         self.current_owner = None
         self.callbacks = {} # { "module_name": release_callback_function }
         self.mutex = threading.Lock()
+        self.settle_seconds = 0.8
+        self.display_names = {
+            "deepseek_ocr": "DeepSeek-OCR",
+            "ollama": "Ollama",
+            "magic_seg": "SAM",
+        }
 
     def register(self, module_name, release_callback):
         """
@@ -39,6 +45,7 @@ class GPUResourceManager:
             if self.current_owner == requester_name:
                 return True # Already owns it
 
+            previous_owner = self.current_owner
             if self.current_owner:
                 logger.info(f"GPU Manager: '{requester_name}' requesting GPU. Revoking from '{self.current_owner}'...")
                 try:
@@ -52,6 +59,8 @@ class GPUResourceManager:
             
             self.current_owner = requester_name
             logger.info(f"GPU Manager: GPU granted to '{requester_name}'")
+            if previous_owner and previous_owner != requester_name and self.settle_seconds > 0:
+                time.sleep(self.settle_seconds)
             return True
 
     def release(self, owner_name):
@@ -60,6 +69,16 @@ class GPUResourceManager:
             if self.current_owner == owner_name:
                 self.current_owner = None
                 logger.info(f"GPU Manager: '{owner_name}' released GPU voluntarily.")
+
+    def get_current_owner(self):
+        with self.mutex:
+            return self.current_owner
+
+    def get_current_owner_label(self):
+        owner = self.get_current_owner()
+        if not owner:
+            return "空闲"
+        return self.display_names.get(owner, str(owner))
 
 # Global instance
 gpu_manager = GPUResourceManager()
