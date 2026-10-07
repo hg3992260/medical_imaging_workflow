@@ -238,7 +238,10 @@ class MainWindow(QMainWindow):
                     self.status_bar.showMessage(f'项目管理 | 授权剩余: {hrs} 小时{exp_suffix}')
         except Exception:
             pass
-        if self.remaining_seconds <= 0:
+        _license_enforce = str(os.environ.get("RSNA_LICENSE_ENFORCE", "0")).strip().lower() in (
+            "1", "true", "yes", "on"
+        )
+        if _license_enforce and self.remaining_seconds <= 0:
             dlg = LicenseActivationDialog(self)
             if dlg.exec_() == QDialog.Accepted and dlg.token_written:
                 self.license_remaining_days = dlg.remaining_days
@@ -253,6 +256,12 @@ class MainWindow(QMainWindow):
                         self.status_bar.showMessage(f'项目管理 | 授权剩余: {hrs} 小时')
             else:
                 os._exit(1)
+        elif not _license_enforce:
+            try:
+                if hasattr(self, "license_label") and self.license_label:
+                    self.license_label.setText("开源版（未启用授权校验）")
+            except Exception:
+                pass
     
     def create_title_bar(self, parent_layout):
         """
@@ -430,6 +439,11 @@ class MainWindow(QMainWindow):
         about_action = QAction('关于(&A)', self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+
+        setup_action = QAction('环境初始化(&I)…', self)
+        setup_action.triggered.connect(self.show_setup)
+        help_menu.addSeparator()
+        help_menu.addAction(setup_action)
     
     def create_status_bar(self):
         """
@@ -770,7 +784,20 @@ class MainWindow(QMainWindow):
         """
         
         QMessageBox.about(self, '关于', about_text)
-    
+
+    def show_setup(self):
+        """
+        显示「首次运行 / 环境初始化」面板：模型权重下载 + API Key 配置。
+        """
+        try:
+            from src.services.setup_service import SetupService
+            from ui.dialogs.first_run_dialog import FirstRunDialog
+            dlg = FirstRunDialog(SetupService(), self)
+            dlg.exec_()
+        except Exception as e:
+            self.logger.error(f"打开初始化面板失败: {e}")
+            QMessageBox.warning(self, '错误', f'无法打开初始化面板: {e}')
+
     def show_ai_summary(self):
         if self.current_project_id is None:
             QMessageBox.warning(self, '警告', '请先选择项目！')

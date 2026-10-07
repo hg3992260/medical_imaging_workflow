@@ -726,13 +726,11 @@ def main():
     ThemeManager.apply_theme(app, saved_theme)
     
     # === License Verification ===
-    # 源码/开发模式默认开放运行（不强制激活）；打包发行版 (frozen) 默认强制校验。
-    # 可用环境变量 RSNA_LICENSE_ENFORCE=0/1 显式覆盖。
-    _enforce_env = os.environ.get("RSNA_LICENSE_ENFORCE")
-    if _enforce_env is None:
-        _enforce = bool(getattr(sys, "frozen", False))
-    else:
-        _enforce = str(_enforce_env).strip().lower() in ("1", "true", "yes", "on")
+    # 开源发行版默认开放运行（不强制激活）；如需商业授权校验，
+    # 设置环境变量 RSNA_LICENSE_ENFORCE=1（打包商业版时可预置）。
+    _enforce = str(os.environ.get("RSNA_LICENSE_ENFORCE", "0")).strip().lower() in (
+        "1", "true", "yes", "on"
+    )
 
     remaining = 0
     exp_ts = 0
@@ -775,6 +773,19 @@ def main():
     _boottrace("boot:mainwindow_created")
     window.show()
     _boottrace("boot:mainwindow_shown")
+
+    # === 首次运行初始化面板（模型权重下载 / API Key 配置）===
+    try:
+        from src.services.setup_service import SetupService
+        from ui.dialogs.first_run_dialog import FirstRunDialog
+        _setup_svc = SetupService()
+        if _setup_svc.needs_setup():
+            _boottrace("boot:first_run_setup_show")
+            _setup_dlg = FirstRunDialog(_setup_svc, window)
+            _setup_dlg.exec_()
+            _boottrace("boot:first_run_setup_done")
+    except Exception as e:
+        logger.error(f"First-run setup dialog failed: {e}")
 
     # Create asyncio loop for async tasks integration if needed
     loop = asyncio.get_event_loop()

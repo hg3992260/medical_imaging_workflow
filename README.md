@@ -68,6 +68,9 @@
 ### 2.6 关于对话框
 ![关于](docs/screenshots/02_about.png)
 
+### 2.7 首次运行初始化面板（模型权重下载 + API Key 配置）
+![首次运行初始化](docs/screenshots/08_first_run_setup.png)
+
 ## 三、五大工作流
 
 | 步骤 | 菜单 | 说明 |
@@ -192,6 +195,10 @@ set RSNA_LICENSE_ENFORCE=0             :: 0=开放模式
 python main.py
 ```
 
+- **首次运行**会自动弹出 **「首次运行初始化 · 环境配置」** 面板：
+  - **① 模型权重**：逐项显示 DeepSeek-OCR / 文本嵌入 / SAM 的**是否就绪**与体积，支持**单项下载**或**一键下载缺失项**（HTTP 直连 HuggingFace，无需 huggingface_hub，离线默认环境同样可用）；
+  - **② 推理后端**：检测本地 **Ollama** 运行状态与模型列表；填写并**保存/测试**外部 **OpenAI 兼容 API**（Base URL / API Key / 模型名）。
+  - 可点「稍后」跳过；之后随时通过菜单 **帮助 → 环境初始化** 重新打开。
 - 首次启动会在 `database/` 生成 SQLite 数据库；
 - 日志输出到 `logs/` 与 `startup.log`；
 - 首次使用时请先「新建项目 / 添加根目录」导入数据。

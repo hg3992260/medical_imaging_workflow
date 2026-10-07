@@ -32,6 +32,7 @@ cocoindex/
 
 # ---- 运行期数据 / 数据库 / 日志 ----
 database/
+coco_data/
 logs/
 storage/
 project_storage/
